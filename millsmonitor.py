@@ -4,7 +4,7 @@ from discord_webhook import DiscordWebhook, DiscordEmbed
 
 
 def output(webhookurl, message):
-    print(message)
+    # print(message)
     webhook = DiscordWebhook(url=webhookurl, content=message)
     return webhook.execute()
 
@@ -16,7 +16,9 @@ def handleRenos(webhookurl, renolist, pingrole=None):
     s = (f"__**Renovations:**__\nCurrent Renos: {renocount}, "
          f"Progress to Next: {renodata['progress']['toNext']*100.0:.2f}%\n"
          f"Top Renovations: ")
-    for idx, reno in enumerate(sorted_renos[:max(len(renolist), renocount)], start=1):
+    for idx, reno in enumerate(sorted_renos, start=1):
+        if idx == renocount + 1:
+            s += "\n----------"
         if idx <= len(renolist) and reno['id'] not in renolist:
             s += f"\n{idx}. ~~{reno['id']} ({reno['percent']}%)~~"
             if pingrole:
@@ -32,15 +34,17 @@ def handleGifts(webhookurl, giftlist, pingrole=None):
     giftcount = millsprogress['total']
     millswishlist = sorted(giftdata["teamWishLists"]["36569151-a2fb-43c1-9df7-2df512424c82"], key=lambda x: float(x["percent"]), reverse=True)
     s = (f"__**Gifts:**__\nCurrent Gifts: {giftcount}, "
-         f"Progress to Next: {millsprogress['toNext']*100.0}%\n"
+         f"Progress to Next: {millsprogress['toNext']*100.0:.2f}%\n"
          f"Top Gifts: ")
-    for idx, gift in enumerate(millswishlist[:max(len(giftlist), giftcount)], start=1):
+    for idx, gift in enumerate(millswishlist, start=1):
+        if idx == giftcount + 1:
+            s += "\n----------"
         if idx <= len(giftlist) and gift['bonus'] not in giftlist:
-            s += f"\n{idx}. ~~{gift['bonus']} ({gift['percent']*100.0}%)~~"
+            s += f"\n{idx}. ~~{gift['bonus']} ({gift['percent']*100.0:.2f}%)~~"
             if pingrole:
                 s += f" <@&{pingrole}>"
         else:
-            s += f"\n{idx}. {gift['bonus']} ({gift['percent']*100.0}%)"
+            s += f"\n{idx}. {gift['bonus']} ({gift['percent']*100.0:.2f}%)"
     output(webhookurl, s)
 
 
