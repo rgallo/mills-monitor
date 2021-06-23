@@ -21,11 +21,13 @@ def handleRenos(webhookurl, renolist, pingrole=None):
         if idx == renocount + 1:
             s += "\n----------"
         if idx <= len(renolist) and reno['id'] not in renolist:
-            s += f"\n{idx}. ~~{reno['id']} ({reno['percent']}%)~~"
+            s += f"\n{idx}. {reno['id']} ({reno['percent']}%) :x:"
             if pingrole:
                 s += f" <@&{pingrole}>"
         else:
             s += f"\n{idx}. {reno['id']} ({reno['percent']}%)"
+            if reno['id'] in renolist:
+                s += " :white_check_mark:" if idx <= renocount else " :pray:"
     output(webhookurl, s)
 
 
@@ -41,11 +43,13 @@ def handleGifts(webhookurl, giftlist, pingrole=None):
         if idx == giftcount + 1:
             s += "\n----------"
         if idx <= len(giftlist) and gift['bonus'] not in giftlist:
-            s += f"\n{idx}. ~~{gift['bonus']} ({gift['percent']*100.0:.2f}%)~~"
+            s += f"\n{idx}. {gift['bonus']} ({gift['percent']*100.0:.2f}%) :x:"
             if pingrole:
                 s += f" <@&{pingrole}>"
         else:
             s += f"\n{idx}. {gift['bonus']} ({gift['percent']*100.0:.2f}%)"
+            if gift['bonus'] in giftlist:
+                s += " :white_check_mark:" if idx <= giftcount else " :pray:"
     output(webhookurl, s)
 
 
