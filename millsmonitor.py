@@ -10,47 +10,48 @@ def output(webhookurl, message):
     return webhook.execute()
 
 
-def handleRenos(webhookurl, renolist, pingrole=None):
-    renodata = requests.get("https://www.blaseball.com/database/renovationProgress?id=ba794e99-4d6b-4e12-9450-6522745190f8").json()
-    sorted_renos = sorted(renodata["stats"], key=lambda x: float(x["percent"]), reverse=True)
-    renocount = renodata['progress']['total']
-    s = (f"__**Renovations:**__\nCurrent Renos: {renocount}, "
-         f"Progress to Next: {renodata['progress']['toNext']*100.0:.2f}%\n"
+def handleItem(webhookurl, name, itemlist, dataurl, funcs, pingrole=None):
+    data = requests.get(dataurl).json()
+    sorted_items = funcs["sorted_items"](data)
+    count = funcs["count"](data)
+    s = (f"__**{name}:**__\nCurrent {name}: {count}, "
+         f"Progress to Next: {funcs['to_next'](data)*100.0:.2f}%\n"
          f"Top Renovations: ")
-    for idx, reno in enumerate(sorted_renos, start=1):
-        if idx == renocount + 1:
+    for idx, item in enumerate(sorted_items, start=1):
+        item_id, item_pct = funcs['id'](item), funcs['percent'](item)
+        if idx == count + 1:
             s += "\n----------"
-        if idx <= len(renolist) and reno['id'] not in renolist:
-            s += f"\n{idx}. {reno['id']} ({reno['percent']}%) :x:"
+        if idx <= len(itemlist) and item_id not in itemlist:
+            s += f"\n{idx}. {item_id} ({item_pct}%) :x:"
             if pingrole:
                 s += f" <@&{pingrole}>"
         else:
-            s += f"\n{idx}. {reno['id']} ({reno['percent']}%)"
-            if reno['id'] in renolist:
-                s += " :white_check_mark:" if idx <= renocount else " :pray:"
+            s += f"\n{idx}. {item_id} ({item_pct}%)"
+            if item_id in itemlist:
+                s += " :white_check_mark:" if idx <= count else " :pray:"
     output(webhookurl, s)
+
+
+def handleRenos(webhookurl, renolist, pingrole=None):
+    funcs = {
+        "sorted_items": lambda data: sorted(data["stats"], key=lambda x: float(x["percent"]), reverse=True),
+        "count": lambda data: data['progress']['total'],
+        'to_next': lambda data: data['progress']['toNext'],
+        "id": lambda item: item['id'],
+        "percent": lambda item: item['percent']
+    }
+    return handleItem(webhookurl, "Renovations", renolist, "https://www.blaseball.com/database/renovationProgress?id=ba794e99-4d6b-4e12-9450-6522745190f8", funcs, pingrole=pingrole)
 
 
 def handleGifts(webhookurl, giftlist, pingrole=None):
-    giftdata = requests.get("https://www.blaseball.com/database/giftProgress").json()
-    millsprogress = giftdata["teamProgress"]["36569151-a2fb-43c1-9df7-2df512424c82"]
-    giftcount = millsprogress['total']
-    millswishlist = sorted(giftdata["teamWishLists"]["36569151-a2fb-43c1-9df7-2df512424c82"], key=lambda x: float(x["percent"]), reverse=True)
-    s = (f"__**Gifts:**__\nCurrent Gifts: {giftcount}, "
-         f"Progress to Next: {millsprogress['toNext']*100.0:.2f}%\n"
-         f"Top Gifts: ")
-    for idx, gift in enumerate(millswishlist, start=1):
-        if idx == giftcount + 1:
-            s += "\n----------"
-        if idx <= len(giftlist) and gift['bonus'] not in giftlist:
-            s += f"\n{idx}. {gift['bonus']} ({gift['percent']*100.0:.2f}%) :x:"
-            if pingrole:
-                s += f" <@&{pingrole}>"
-        else:
-            s += f"\n{idx}. {gift['bonus']} ({gift['percent']*100.0:.2f}%)"
-            if gift['bonus'] in giftlist:
-                s += " :white_check_mark:" if idx <= giftcount else " :pray:"
-    output(webhookurl, s)
+    funcs = {
+        "sorted_items": lambda data: sorted(data["teamWishLists"]["36569151-a2fb-43c1-9df7-2df512424c82"], key=lambda x: float(x["percent"]), reverse=True),
+        "count": lambda data: data["teamProgress"]["36569151-a2fb-43c1-9df7-2df512424c82"]['total'],
+        'to_next': lambda data: data["teamProgress"]["36569151-a2fb-43c1-9df7-2df512424c82"]['toNext'],
+        "id": lambda item: item['bonus'],
+        "percent": lambda item: f"{item['percent'] * 100.0:.2f}"
+    }
+    return handleItem(webhookurl, "Gifts", giftlist, "https://www.blaseball.com/database/giftProgress", funcs, pingrole=pingrole)
 
 
 def handle_args():
