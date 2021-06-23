@@ -1,3 +1,4 @@
+import sys
 import requests
 import argparse
 from discord_webhook import DiscordWebhook, DiscordEmbed
@@ -58,6 +59,9 @@ def handle_args():
     return args
 
 def main():
+    day = requests.get("https://www.blaseball.com/database/simulationData").json()["day"]
+    if not 26 <= day <= 71:
+        sys.exit()
     args = handle_args()
     handleRenos(args.webhook, args.renos.split(","), args.pingrole)
     handleGifts(args.webhook, args.gifts.split(","), args.pingrole)
