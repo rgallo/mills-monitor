@@ -69,7 +69,8 @@ def main():
     if not 26 <= day <= 71:
         sys.exit()
     args = handle_args()
-    outputstr = f"{'-'*30}**{datetime.datetime.now().strftime('%I:%M %p')}**{'-'*30}\n"
+    sep = '-' * 20
+    outputstr = f"{sep}**{datetime.datetime.now().strftime('%I:%M %p')}**{sep}\n"
     outputstr += handleRenos(args.renos.split(","), args.pingrole)
     outputstr += "\n\n"
     outputstr += handleGifts(args.gifts.split(","), args.pingrole)
