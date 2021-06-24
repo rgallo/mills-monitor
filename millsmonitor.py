@@ -1,6 +1,7 @@
 import sys
 import requests
 import argparse
+import datetime
 from discord_webhook import DiscordWebhook, DiscordEmbed
 
 
@@ -10,7 +11,7 @@ def output(webhookurl, message):
     return webhook.execute()
 
 
-def handleItem(webhookurl, name, itemlist, dataurl, funcs, pingrole=None):
+def handleItem(name, itemlist, dataurl, funcs, pingrole=None):
     data = requests.get(dataurl).json()
     sorted_items = funcs["sorted_items"](data)
     count = funcs["count"](data)
@@ -29,10 +30,10 @@ def handleItem(webhookurl, name, itemlist, dataurl, funcs, pingrole=None):
             s += f"\n{idx}. {item_id} ({item_pct}%)"
             if item_id in itemlist:
                 s += " :white_check_mark:" if idx <= count else " :pray:"
-    output(webhookurl, s)
+    return s
 
 
-def handleRenos(webhookurl, renolist, pingrole=None):
+def handleRenos(renolist, pingrole=None):
     funcs = {
         "sorted_items": lambda data: sorted(data["stats"], key=lambda x: float(x["percent"]), reverse=True),
         "count": lambda data: data['progress']['total'],
@@ -40,10 +41,10 @@ def handleRenos(webhookurl, renolist, pingrole=None):
         "id": lambda item: item['id'],
         "percent": lambda item: item['percent']
     }
-    return handleItem(webhookurl, "Renovations", renolist, "https://www.blaseball.com/database/renovationProgress?id=ba794e99-4d6b-4e12-9450-6522745190f8", funcs, pingrole=pingrole)
+    return handleItem("Renovations", renolist, "https://www.blaseball.com/database/renovationProgress?id=ba794e99-4d6b-4e12-9450-6522745190f8", funcs, pingrole=pingrole)
 
 
-def handleGifts(webhookurl, giftlist, pingrole=None):
+def handleGifts(giftlist, pingrole=None):
     funcs = {
         "sorted_items": lambda data: sorted(data["teamWishLists"]["36569151-a2fb-43c1-9df7-2df512424c82"], key=lambda x: float(x["percent"]), reverse=True),
         "count": lambda data: data["teamProgress"]["36569151-a2fb-43c1-9df7-2df512424c82"]['total'],
@@ -51,7 +52,7 @@ def handleGifts(webhookurl, giftlist, pingrole=None):
         "id": lambda item: item['bonus'],
         "percent": lambda item: f"{item['percent'] * 100.0:.2f}"
     }
-    return handleItem(webhookurl, "Gifts", giftlist, "https://www.blaseball.com/database/giftProgress", funcs, pingrole=pingrole)
+    return handleItem("Gifts", giftlist, "https://www.blaseball.com/database/giftProgress", funcs, pingrole=pingrole)
 
 
 def handle_args():
@@ -68,8 +69,11 @@ def main():
     if not 26 <= day <= 71:
         sys.exit()
     args = handle_args()
-    handleRenos(args.webhook, args.renos.split(","), args.pingrole)
-    handleGifts(args.webhook, args.gifts.split(","), args.pingrole)
+    outputstr = f"{'-'*30}**{datetime.datetime.now().strftime('%I:%m %p')}**{'-'*30}\n"
+    outputstr += handleRenos(args.renos.split(","), args.pingrole)
+    outputstr += "\n\n"
+    outputstr += handleGifts(args.gifts.split(","), args.pingrole)
+    output(args.webhook, outputstr)
     
 
 if __name__ == "__main__":
