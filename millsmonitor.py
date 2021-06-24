@@ -6,7 +6,7 @@ from discord_webhook import DiscordWebhook, DiscordEmbed
 
 def output(webhookurl, message):
     # print(message)
-    webhook = DiscordWebhook(url=webhookurl, content=message)
+    webhook = DiscordWebhook(url=webhookurl.split(";"), content=message)
     return webhook.execute()
 
 
