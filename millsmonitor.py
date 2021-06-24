@@ -18,7 +18,7 @@ def handleItem(name, itemlist, dataurl, funcs, pingrole=None):
     s = (f"__**{name}:**__\nCurrent {name}: {count}, "
          f"Progress to Next: {funcs['to_next'](data)*100.0:.2f}%\n"
          f"Top {name}: ")
-    all_wanted = all(item in sorted_items[:count] for item in itemlist)
+    all_wanted = all(item in [funcs['id'](si) for si in sorted_items[:count]] for item in itemlist)
     for idx, item in enumerate(sorted_items, start=1):
         item_id, item_pct = funcs['id'](item), funcs['percent'](item)
         if idx == count + 1:
