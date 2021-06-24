@@ -18,13 +18,14 @@ def handleItem(name, itemlist, dataurl, funcs, pingrole=None):
     s = (f"__**{name}:**__\nCurrent {name}: {count}, "
          f"Progress to Next: {funcs['to_next'](data)*100.0:.2f}%\n"
          f"Top {name}: ")
+    all_wanted = all(item in sorted_items[:count] for item in itemlist)
     for idx, item in enumerate(sorted_items, start=1):
         item_id, item_pct = funcs['id'](item), funcs['percent'](item)
         if idx == count + 1:
             s += "\n----------"
         if idx <= len(itemlist) and item_id not in itemlist:
-            s += f"\n{idx}. {item_id} ({item_pct}%) :x:"
-            if pingrole:
+            s += f"\n{idx}. {item_id} ({item_pct}%) {':question:' if all_wanted else ':x:'}"
+            if pingrole and not all_wanted:
                 s += f" <@&{pingrole}>"
         else:
             s += f"\n{idx}. {item_id} ({item_pct}%)"
