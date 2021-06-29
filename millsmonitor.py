@@ -72,11 +72,13 @@ def main():
         sys.exit()
     args = handle_args()
     pingrole = args.pingrole if day > int(args.pingday) else None
+    renos = args.renos.split(",") if args.renos else []
+    gifts = args.gifts.split(",") if args.gifts else []
     sep = '-' * 20
     outputstr = f"{sep}**{datetime.datetime.now().strftime('%I:%M %p')}**{sep}\n"
-    outputstr += handleRenos(args.renos.split(","), pingrole)
+    outputstr += handleRenos(renos, pingrole)
     outputstr += "\n\n"
-    outputstr += handleGifts(args.gifts.split(","), pingrole)
+    outputstr += handleGifts(gifts, pingrole)
     output(args.webhook, outputstr)
     
 
