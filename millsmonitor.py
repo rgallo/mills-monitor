@@ -62,19 +62,21 @@ def handle_args():
     parser.add_argument('--gifts', help="top gift list comma separated")
     parser.add_argument('--renos', help="top reno list comma separated")
     parser.add_argument('--pingrole', help="id of role to ping")
+    parser.add_argument('--pingday', help="when to start pinging", default="27")
     args = parser.parse_args()
     return args
 
 def main():
     day = requests.get("https://www.blaseball.com/database/simulationData").json()["day"]
-    if not 26 <= day <= 71:
+    if not 26 <= day <= 72:
         sys.exit()
     args = handle_args()
+    pingrole = args.pingrole if day > int(args.pingday) else None
     sep = '-' * 20
     outputstr = f"{sep}**{datetime.datetime.now().strftime('%I:%M %p')}**{sep}\n"
-    outputstr += handleRenos(args.renos.split(","), args.pingrole)
+    outputstr += handleRenos(args.renos.split(","), pingrole)
     outputstr += "\n\n"
-    outputstr += handleGifts(args.gifts.split(","), args.pingrole)
+    outputstr += handleGifts(args.gifts.split(","), pingrole)
     output(args.webhook, outputstr)
     
 
