@@ -35,7 +35,15 @@ def handleItem(name, itemlist, dataurl, funcs, pingrole=None):
     return s
 
 
-def handleRenos(renolist, pingrole=None):
+def handleRenos(teamid, renolist, pingrole=None):
+    stadiums = requests.get("https://api.sibr.dev/chronicler/v1/stadiums").json()["data"]
+    stadium_id = None
+    for stadium in stadiums:
+        if stadium["data"]["teamId"] == teamid:
+            stadium_id = stadium["data"]["id"]
+            break
+    if not stadium_id:
+        raise Exception("invalid team id")
     funcs = {
         "sorted_items": lambda data: sorted(data["stats"], key=lambda x: float(x["percent"]), reverse=True),
         "count": lambda data: data['progress']['total'],
@@ -44,14 +52,15 @@ def handleRenos(renolist, pingrole=None):
         "percent": lambda item: item['percent'],
         "names": lambda ids: {attr["id"]: attr["title"] for attr in requests.get(f"https://www.blaseball.com/database/renovations?ids={','.join(ids)}").json()}
     }
-    return handleItem("Renovations", renolist, "https://www.blaseball.com/database/renovationProgress?id=ba794e99-4d6b-4e12-9450-6522745190f8", funcs, pingrole=pingrole)
+    return handleItem("Renovations", renolist, f"https://www.blaseball.com/database/renovationProgress?id={stadium_id}", funcs, pingrole=pingrole)
 
 
-def handleGifts(giftlist, pingrole=None):
+def handleGifts(teamid, giftlist, pingrole=None):
+    print(teamid)
     funcs = {
-        "sorted_items": lambda data: sorted(data["teamWishLists"]["36569151-a2fb-43c1-9df7-2df512424c82"], key=lambda x: float(x["percent"]), reverse=True),
-        "count": lambda data: data["teamProgress"]["36569151-a2fb-43c1-9df7-2df512424c82"]['total'],
-        'to_next': lambda data: data["teamProgress"]["36569151-a2fb-43c1-9df7-2df512424c82"]['toNext'],
+        "sorted_items": lambda data: sorted(data["teamWishLists"][teamid], key=lambda x: float(x["percent"]), reverse=True),
+        "count": lambda data: data["teamProgress"][teamid]['total'],
+        'to_next': lambda data: data["teamProgress"][teamid]['toNext'],
         "id": lambda item: item['bonus'],
         "percent": lambda item: f"{item['percent'] * 100.0:.2f}",
         "names": lambda ids: {gift["id"]: gift["title"] for gift in requests.get("https://www.blaseball.com/database/offseasonSetup").json()["gifts"]}
@@ -67,6 +76,7 @@ def handle_args():
     parser.add_argument('--pingrole', help="id of role to ping")
     parser.add_argument('--pingday', help="when to start pinging", default="27")
     parser.add_argument('--minutemode', help="don't run on 5s", action='store_true')
+    parser.add_argument('--teamid', help="team id", default="36569151-a2fb-43c1-9df7-2df512424c82")
     args = parser.parse_args()
     return args
 
@@ -82,9 +92,9 @@ def main():
     gifts = args.gifts.split(",") if args.gifts else []
     sep = '-' * 20
     outputstr = f"{sep}**{datetime.datetime.now().strftime('%I:%M %p')}**{sep}\n"
-    outputstr += handleRenos(renos, pingrole)
+    outputstr += handleRenos(args.teamid, renos, pingrole)
     outputstr += "\n\n"
-    outputstr += handleGifts(gifts, pingrole)
+    outputstr += handleGifts(args.teamid, gifts, pingrole)
     output(args.webhook, outputstr)
     
 
