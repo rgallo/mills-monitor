@@ -5,13 +5,16 @@ import datetime
 from discord_webhook import DiscordWebhook, DiscordEmbed
 
 
-def output(webhookurl, message):
-    # print(message)
-    webhook = DiscordWebhook(url=webhookurl.split(";"), content=message)
-    return webhook.execute()
+def output(webhookurl, message, discord=True):
+    if discord:
+        webhook = DiscordWebhook(url=webhookurl.split(";"), content=message)
+        return webhook.execute()
+    else:
+        return print(message)
+        
 
 
-def handleItem(name, itemlist, dataurl, funcs, pingrole=None):
+def handleItem(name, gooditems, baditems, dataurl, funcs, pingrole=None):
     data = requests.get(dataurl).json()
     sorted_items = funcs["sorted_items"](data)
     count = funcs["count"](data)
@@ -19,23 +22,32 @@ def handleItem(name, itemlist, dataurl, funcs, pingrole=None):
     s = (f"__**{name}:**__\nCurrent {name}: {count}, "
          f"Progress to Next: {funcs['to_next'](data)*100.0:.2f}%\n"
          f"Top {name}: ")
-    all_wanted = all(item in [funcs['id'](si) for si in sorted_items[:count]] for item in itemlist)
     for idx, item in enumerate(sorted_items, start=1):
         item_id, item_pct = funcs['id'](item), funcs['percent'](item)
         if idx == count + 1:
             s += "\n----------"
-        if idx <= len(itemlist) and item_id not in itemlist:
-            s += f"\n{idx}. {names[item_id]} ({item_pct}%) {':question:' if all_wanted else ':x:'}"
-            if pingrole and not all_wanted:
-                s += f" <@&{pingrole}>"
+        s += f"\n{idx}. {names[item_id]} ({item_pct}%)"
+        above_line = idx <= count
+        is_good = item_id in gooditems
+        is_bad = item_id in baditems
+        if above_line:
+            if is_good:
+                s += " :white_check_mark:"
+            elif is_bad:
+                s += " :x:"
+                if pingrole:
+                    s += f" <@&{pingrole}>"
+            elif gooditems or baditems:
+                s += " :neutral_face:"
         else:
-            s += f"\n{idx}. {names[item_id]} ({item_pct}%)"
-            if item_id in itemlist:
-                s += " :white_check_mark:" if idx <= count else " :pray:"
+            if is_good:
+                s += " :pray:"
+            elif is_bad:
+                s += " :no_entry_sign:"
     return s
 
 
-def handleRenos(teamid, renolist, pingrole=None):
+def handleRenos(teamid, goodrenos, badrenos, pingrole=None):
     stadiums = requests.get("https://api.sibr.dev/chronicler/v1/stadiums").json()["data"]
     stadium_id = None
     for stadium in stadiums:
@@ -52,11 +64,10 @@ def handleRenos(teamid, renolist, pingrole=None):
         "percent": lambda item: item['percent'],
         "names": lambda ids: {attr["id"]: attr["title"] for attr in requests.get(f"https://www.blaseball.com/database/renovations?ids={','.join(ids)}").json()}
     }
-    return handleItem("Renovations", renolist, f"https://www.blaseball.com/database/renovationProgress?id={stadium_id}", funcs, pingrole=pingrole)
+    return handleItem("Renovations", goodrenos, badrenos, f"https://www.blaseball.com/database/renovationProgress?id={stadium_id}", funcs, pingrole=pingrole)
 
 
-def handleGifts(teamid, giftlist, pingrole=None):
-    print(teamid)
+def handleGifts(teamid, goodgifts, badgifts, pingrole=None):
     funcs = {
         "sorted_items": lambda data: sorted(data["teamWishLists"][teamid], key=lambda x: float(x["percent"]), reverse=True),
         "count": lambda data: data["teamProgress"][teamid]['total'],
@@ -65,18 +76,21 @@ def handleGifts(teamid, giftlist, pingrole=None):
         "percent": lambda item: f"{item['percent'] * 100.0:.2f}",
         "names": lambda ids: {gift["id"]: gift["title"] for gift in requests.get("https://www.blaseball.com/database/offseasonSetup").json()["gifts"]}
     }
-    return handleItem("Gifts", giftlist, "https://www.blaseball.com/database/giftProgress", funcs, pingrole=pingrole)
+    return handleItem("Gifts", goodgifts, badgifts, "https://www.blaseball.com/database/giftProgress", funcs, pingrole=pingrole)
 
 
 def handle_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--webhook', help="webhook url")
-    parser.add_argument('--gifts', help="top gift list comma separated")
-    parser.add_argument('--renos', help="top reno list comma separated")
+    parser.add_argument('--goodgifts', help="good gift list comma separated")
+    parser.add_argument('--goodrenos', help="good reno list comma separated")
+    parser.add_argument('--badgifts', help="bad gift list comma separated")
+    parser.add_argument('--badrenos', help="bad reno list comma separated")
     parser.add_argument('--pingrole', help="id of role to ping")
     parser.add_argument('--pingday', help="when to start pinging", default="27")
     parser.add_argument('--minutemode', help="don't run on 5s", action='store_true')
     parser.add_argument('--teamid', help="team id", default="36569151-a2fb-43c1-9df7-2df512424c82")
+    parser.add_argument('--print', help="print instead of discord", action='store_true')
     args = parser.parse_args()
     return args
 
@@ -88,14 +102,16 @@ def main():
     if args.minutemode and not datetime.datetime.now().minute % 5 and day < 71:
         sys.exit()
     pingrole = args.pingrole if day > int(args.pingday) else None
-    renos = args.renos.split(",") if args.renos else []
-    gifts = args.gifts.split(",") if args.gifts else []
+    goodrenos = args.goodrenos.split(",") if args.goodrenos else []
+    goodgifts = args.goodgifts.split(",") if args.goodgifts else []
+    badrenos = args.badrenos.split(",") if args.badrenos else []
+    badgifts = args.badgifts.split(",") if args.badgifts else []
     sep = '-' * 20
     outputstr = f"{sep}**{datetime.datetime.now().strftime('%I:%M %p')}**{sep}\n"
-    outputstr += handleRenos(args.teamid, renos, pingrole)
+    outputstr += handleRenos(args.teamid, goodrenos, badrenos, pingrole)
     outputstr += "\n\n"
-    outputstr += handleGifts(args.teamid, gifts, pingrole)
-    output(args.webhook, outputstr)
+    outputstr += handleGifts(args.teamid, goodgifts, badgifts, pingrole)
+    output(args.webhook, outputstr, discord=not args.print)
     
 
 if __name__ == "__main__":
