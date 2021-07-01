@@ -3,6 +3,7 @@ import requests
 import argparse
 import datetime
 from discord_webhook import DiscordWebhook, DiscordEmbed
+import yaml
 
 
 def output(webhookurl, message, discord=True):
@@ -82,6 +83,7 @@ def handleGifts(teamid, goodgifts, badgifts, pingrole=None):
 def handle_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--webhook', help="webhook url")
+    parser.add_argument('--configurl', help="config url")
     parser.add_argument('--goodgifts', help="good gift list comma separated")
     parser.add_argument('--goodrenos', help="good reno list comma separated")
     parser.add_argument('--badgifts', help="bad gift list comma separated")
@@ -92,6 +94,8 @@ def handle_args():
     parser.add_argument('--teamid', help="team id", default="36569151-a2fb-43c1-9df7-2df512424c82")
     parser.add_argument('--print', help="print instead of discord", action='store_true')
     args = parser.parse_args()
+    if args.configurl and (args.goodgifts or args.badgifts or args.goodrenos or args.badrenos):
+        print("Do not specify both config url and good/bad lists")
     return args
 
 def main():
@@ -102,10 +106,17 @@ def main():
     if args.minutemode and not datetime.datetime.now().minute % 5 and day < 71:
         sys.exit()
     pingrole = args.pingrole if day > int(args.pingday) else None
-    goodrenos = args.goodrenos.split(",") if args.goodrenos else []
-    goodgifts = args.goodgifts.split(",") if args.goodgifts else []
-    badrenos = args.badrenos.split(",") if args.badrenos else []
-    badgifts = args.badgifts.split(",") if args.badgifts else []
+    if args.configurl:
+        config = yaml.load(requests.get(args.configurl).text, Loader=yaml.BaseLoader)
+        goodrenos = config.get("goodrenos", [])
+        goodgifts = config.get("goodgifts", [])
+        badrenos = config.get("badrenos", [])
+        badgifts = config.get("badgifts", [])
+    else:
+        goodrenos = args.goodrenos.split(",") if args.goodrenos else []
+        goodgifts = args.goodgifts.split(",") if args.goodgifts else []
+        badrenos = args.badrenos.split(",") if args.badrenos else []
+        badgifts = args.badgifts.split(",") if args.badgifts else []
     sep = '-' * 20
     outputstr = f"{sep}**{datetime.datetime.now().strftime('%I:%M %p')}**{sep}\n"
     outputstr += handleRenos(args.teamid, goodrenos, badrenos, pingrole)
