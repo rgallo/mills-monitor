@@ -121,7 +121,7 @@ def main():
     if not 27 <= day <= 72:
         sys.exit()
     args = handle_args()
-    if args.minutemode and not now.minute % 5 and day <= 71:
+    if args.minutemode and (not now.minute % 5 or day <= 71):
         sys.exit()
     pingrole = args.pingrole if day > int(args.pingday) else None
     if args.configurl:
