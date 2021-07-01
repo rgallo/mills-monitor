@@ -115,12 +115,13 @@ def handle_args():
     return args
 
 def main():
+    now = datetime.datetime.now()
     simdata = requests.get("https://www.blaseball.com/database/simulationData").json()
     season, day = simdata["season"] + 1, simdata["day"] + 1
     if not 27 <= day <= 72:
         sys.exit()
     args = handle_args()
-    if args.minutemode and not datetime.datetime.now().minute % 5 and day <= 71:
+    if args.minutemode and not now.minute % 5 and day <= 71:
         sys.exit()
     pingrole = args.pingrole if day > int(args.pingday) else None
     if args.configurl:
@@ -135,7 +136,7 @@ def main():
         badrenos = args.badrenos.split(",") if args.badrenos else []
         badgifts = args.badgifts.split(",") if args.badgifts else []
     sep = '-' * 20
-    outputstr = f"{sep}**{datetime.datetime.now().strftime('%I:%M %p')}**{sep}\n"
+    outputstr = f"{sep}**{now.strftime('%I:%M %p')}**{sep}\n"
     outputstr += handleRenos(args.teamid, goodrenos, badrenos, season, pingrole)
     outputstr += "\n\n"
     outputstr += handleGifts(args.teamid, goodgifts, badgifts, pingrole)
