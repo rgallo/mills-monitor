@@ -24,7 +24,7 @@ def handleItem(name, gooditems, baditems, dataurl, funcs, pingrole=None):
     to_next = funcs['to_next'](data)*100.0
     newline = "\n"
     s = (f"__**{name}:**__\nCurrent {name}: {count}, "
-         f"Progress to Next: {to_next:.2f}%{f' ({remaining_to_next:,.0f})' if remaining_to_next else ''}\n"
+         f"Progress to Next: {to_next:.2f}%{f' ({remaining_to_next:,.0f} coins needed)' if remaining_to_next else ''}\n"
          f"{f'Total Spent: {total_spent:,.0f}{newline}' if total_spent else ''}"
          f"Top {name}: ")
     for idx, item in enumerate(sorted_items, start=1):
