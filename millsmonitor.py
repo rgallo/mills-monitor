@@ -18,6 +18,8 @@ def output(webhookurl, message, discord=True):
 def handleItem(name, gooditems, baditems, dataurl, funcs, pingrole=None):
     data = requests.get(dataurl).json()
     sorted_items = funcs["sorted_items"](data)
+    if not sorted_items:
+        return ""
     count = funcs["count"](data)
     names = funcs["names"]([funcs['id'](item) for item in sorted_items])
     total_spent, remaining_to_next = funcs["total_spent"](data) if funcs.get("total_spent", None) else (None, None)
@@ -86,7 +88,7 @@ def handleRenos(teamid, goodrenos, badrenos, season, pingrole=None):
 
 def handleGifts(teamid, goodgifts, badgifts, pingrole=None):
     funcs = {
-        "sorted_items": lambda data: sorted(data["teamWishLists"][teamid], key=lambda x: float(x["percent"]), reverse=True),
+        "sorted_items": lambda data: (sorted(data["teamWishLists"][teamid], key=lambda x: float(x["percent"]), reverse=True) if teamid in data["teamWishLists"] else None),
         "count": lambda data: data["teamProgress"][teamid]['total'],
         'to_next': lambda data: data["teamProgress"][teamid]['toNext'],
         "id": lambda item: item['bonus'],
@@ -137,9 +139,9 @@ def main():
         badgifts = args.badgifts.split(",") if args.badgifts else []
     sep = '-' * 20
     outputstr = f"{sep}**{now.strftime('%I:%M %p')}**{sep}\n"
-    outputstr += handleRenos(args.teamid, goodrenos, badrenos, season, pingrole)
-    outputstr += "\n\n"
-    outputstr += handleGifts(args.teamid, goodgifts, badgifts, pingrole)
+    renos_str = handleRenos(args.teamid, goodrenos, badrenos, season, pingrole)
+    gifts_str = handleGifts(args.teamid, goodgifts, badgifts, pingrole)
+    outputstr += "\n\n".join(s for s in (renos_str, gifts_str) if s)
     output(args.webhook, outputstr, discord=not args.print)
     
 
