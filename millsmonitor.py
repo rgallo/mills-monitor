@@ -24,6 +24,7 @@ def handleItem(name, gooditems, baditems, dataurl, funcs, pingrole=None):
     names = funcs["names"]([funcs['id'](item) for item in sorted_items])
     total_spent, remaining_to_next = funcs["total_spent"](data) if funcs.get("total_spent", None) else (None, None)
     to_next = funcs['to_next'](data)*100.0
+    per_item = funcs['per_item']
     newline = "\n"
     s = (f"__**{name}:**__\nCurrent {name}: {count}, "
          f"Progress to Next: {to_next:.2f}%{f' ({remaining_to_next:,.0f} coins needed)' if remaining_to_next else ''}\n"
@@ -34,7 +35,7 @@ def handleItem(name, gooditems, baditems, dataurl, funcs, pingrole=None):
         if idx == count + 1:
             s += "\n----------"
         s += f"\n{idx}. {names[item_id]} ({item_pct*100.0:.2f}%)"
-        if total_spent:
+        if per_item and total_spent:
             s += f" ({item_pct * total_spent:,.0f})"
         above_line = idx <= count
         is_good = item_id in gooditems
@@ -64,6 +65,15 @@ def get_total_spent_and_remaining(last_count, current_count, to_next):
     return total_spend, next_spend - total_spend
 
 
+def get_gift_total(current_count, to_next):
+    tiers = [1000000.0, 3000000.0, 9000000.0, 27000000.0, 81000000.0]
+    total_achieved_spend = sum(tiers[i] for i in range(current_count))
+    next_spend = sum(tiers[i] for i in range(current_count+1))
+    partial_spend = (next_spend - total_achieved_spend) * to_next
+    total_spend = total_achieved_spend + partial_spend
+    return total_spend, next_spend - total_spend
+
+
 def handleRenos(teamid, goodrenos, badrenos, season, pingrole=None):
     stadiums = requests.get("https://api.sibr.dev/chronicler/v1/stadiums").json()["data"]
     stadium_id = None
@@ -82,6 +92,7 @@ def handleRenos(teamid, goodrenos, badrenos, season, pingrole=None):
         "percent": lambda item: float(item['percent']) / 100.0,
         "names": lambda ids: {attr["id"]: attr["title"] for attr in requests.get(f"https://www.blaseball.com/database/renovations?ids={','.join(ids)}").json()},
         "total_spent": lambda data: get_total_spent_and_remaining(last_reno_count, data['progress']['total'], data['progress']['toNext']),
+        "per_item": True
     }
     return handleItem("Renovations", goodrenos, badrenos, f"https://www.blaseball.com/database/renovationProgress?id={stadium_id}", funcs, pingrole=pingrole)
 
@@ -93,7 +104,9 @@ def handleGifts(teamid, goodgifts, badgifts, pingrole=None):
         'to_next': lambda data: data["teamProgress"][teamid]['toNext'],
         "id": lambda item: item['bonus'],
         "percent": lambda item: item['percent'],
-        "names": lambda ids: {gift["id"]: gift["title"] for gift in requests.get("https://www.blaseball.com/database/offseasonSetup").json()["gifts"]}
+        "names": lambda ids: {gift["id"]: gift["title"] for gift in requests.get("https://www.blaseball.com/database/offseasonSetup").json()["gifts"]},
+        "total_spent": lambda data: get_gift_total(data["teamProgress"][teamid]['total'], data["teamProgress"][teamid]['toNext']),
+        "per_item": False
     }
     return handleItem("Gifts", goodgifts, badgifts, "https://www.blaseball.com/database/giftProgress", funcs, pingrole=pingrole)
 
